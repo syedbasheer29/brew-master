@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String           @unique
+  password        String
+  name            String?
+  phone           String?
+  address         String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  savedBlends     SavedBlend[]
+  orders          Order[]
+  subscriptionPlan Subscription?
+  paymentMethods  PaymentMethod[]
+  notifications   Notification[]
+}
+
+model SavedBlend {
+  id        String   @id @default(uuid())
+  userId    String
+  blendId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  blend     Blend    @relation(fields: [blendId], references: [id])
+}
+
+model Blend {
+  id          String       @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  ingredients Json
+  createdAt   DateTime     @default(now())
+  savedBy     SavedBlend[]
+}
+
+model Order {
+  id        String      @id @default(uuid())
+  userId    String
+  status    OrderStatus @default(PENDING)
+  total     Float
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  user      User        @relation(fields: [userId], references: [id])
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  imageUrl    String?
+  createdAt   DateTime    @default(now())
+  orderItems  OrderItem[]
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  planId    String
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  status    SubscriptionStatus @default(ACTIVE)
+  user      User     @relation(fields: [userId], references: [id])
+  plan      Plan     @relation(fields: [planId], references: [id])
+}
+
+model Plan {
+  id            String         @id @default(uuid())
+  name          String
+  description   String
+  price         Float
+  duration      Int           // Duration in days
+  subscriptions Subscription[]
+}
+
+model PaymentMethod {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   // e.g., "credit_card", "paypal"
+  details   Json     // Encrypted payment details
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   // e.g., "order_status", "subscription_renewal"
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+  EXPIRED
+} 
